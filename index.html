@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VMD 프롬프트 생성기</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --card:#FFFFFF; --ink:#1C1C28; --ink-soft:#6A7180; --ink-dim:#A2A8B4;
+    --line:#EFEAEE; --line2:#E4DEE3; --field:#F7F5F8;
+    --red:#FF2E5B; --red-deep:#E4104A;
+    --grad:linear-gradient(135deg,#FF3D6E 0%,#FF7A45 100%);
+    --blue:#4C6FFF; --green:#12B76A; --amber:#B4690E;
+  }
+  *{box-sizing:border-box;} html{-webkit-text-size-adjust:100%;}
+  body{margin:0; min-height:100vh; color:var(--ink);
+    background:
+      radial-gradient(820px 460px at 8% -6%, rgba(255,61,110,.12), transparent 60%),
+      radial-gradient(760px 420px at 96% -2%, rgba(76,111,255,.10), transparent 55%),
+      radial-gradient(700px 500px at 60% 108%, rgba(255,122,69,.08), transparent 55%),
+      #FBFAFC;
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 22px 70px;}
+
+  header{padding:30px 0 22px; display:flex; align-items:center; gap:13px; flex-wrap:wrap;}
+  .logo{width:46px; height:46px; border-radius:13px; background:var(--grad);
+    display:flex; align-items:center; justify-content:center; font-size:23px; box-shadow:0 8px 22px rgba(255,61,110,.32);}
+  h1{font-size:23px; font-weight:800; margin:0; letter-spacing:-.02em;}
+  .brand .sub{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+  .grid{display:grid; grid-template-columns:1fr 400px; gap:20px; align-items:start;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:0 4px 20px rgba(30,20,40,.05);}
+  .card + .card{margin-top:16px;}
+  .card h2{font-size:13px; font-weight:800; letter-spacing:.02em; margin:0 0 16px; display:flex; align-items:center; gap:8px;}
+  .card h2 .dot{width:8px; height:8px; border-radius:50%; background:var(--grad);}
+
+  .row{margin-bottom:16px;} .row:last-child{margin-bottom:0;}
+  label.lab{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin-bottom:7px;}
+  label.lab .opt{font-weight:500; color:var(--ink-dim);}
+  input[type=text], select, textarea{width:100%; background:var(--field); border:1px solid var(--line2); color:var(--ink);
+    border-radius:11px; padding:11px 13px; font-size:14.5px; font-family:inherit;}
+  textarea{resize:vertical; min-height:64px;}
+  input::placeholder, textarea::placeholder{color:var(--ink-dim);}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--red); border-color:var(--red);}
+  select{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236A7180' d='M6 8 0 0h12z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:34px;}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+
+  .seg{display:inline-flex; background:var(--field); border:1px solid var(--line2); border-radius:11px; padding:3px; gap:2px; flex-wrap:wrap;}
+  .seg button{border:none; background:transparent; color:var(--ink-soft); font-family:inherit; font-weight:700; font-size:13px; padding:8px 13px; border-radius:8px; cursor:pointer; white-space:nowrap;}
+  .seg button.on{background:var(--grad); color:#fff;}
+  .seg.full{display:flex;} .seg.full button{flex:1;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{border:1px solid var(--line2); background:var(--field); color:var(--ink-soft); border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; user-select:none;}
+  .chip.on{background:#FFEAF0; border-color:var(--red); color:var(--red-deep);}
+  .hint{font-size:12px; color:var(--ink-dim); margin-top:7px;}
+
+  .refbox{margin-top:12px; display:flex; gap:13px; align-items:center; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .refthumb{width:64px; height:64px; flex:0 0 auto; border-radius:9px; background:#fff center/contain no-repeat; border:1px solid var(--line2);}
+  .refbox .rtext{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .refbox .rtext b{color:var(--ink);}
+  .refbox a.dl{color:var(--red); font-weight:700; text-decoration:none;}
+  .refbox.empty .refthumb{display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--ink-dim);}
+
+  .sticky{position:sticky; top:18px;}
+  .preview-card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; text-align:center; box-shadow:0 4px 20px rgba(30,20,40,.05);}
+  .preview-card h2{justify-content:center;}
+  .stage{display:flex; align-items:center; justify-content:center; min-height:300px; padding:10px 0 4px;}
+  .pv-frame{background:#fff; border:1px solid var(--line2); border-radius:8px; overflow:hidden; box-shadow:0 10px 26px rgba(30,20,40,.10); max-width:100%;}
+  .ratio-tag{font-size:11.5px; color:var(--ink-dim); margin-top:10px;}
+
+  .promptbox-card{margin-top:16px;}
+  .outbox{background:#FAFAFB; border:1px solid var(--line2); border-radius:12px; padding:14px 15px; font-size:13px; line-height:1.75; color:#33384A; white-space:pre-wrap; word-break:break-word; text-align:left; max-height:240px; overflow:auto; font-family:'Pretendard','Malgun Gothic',sans-serif;}
+  .outbox .slot{color:var(--red); font-weight:700;}
+  .btns{display:grid; grid-template-columns:1fr; gap:9px; margin-top:13px;}
+  .btn{border:none; font-family:inherit; font-weight:800; font-size:14.5px; padding:13px; border-radius:12px; cursor:pointer; transition:.15s; display:flex; align-items:center; justify-content:center; gap:7px;}
+  .btn.primary{background:var(--grad); color:#fff; box-shadow:0 6px 18px rgba(255,61,110,.28);}
+  .btn.primary:hover{filter:brightness(1.04);}
+  .btn.primary.done{background:var(--green); box-shadow:none;}
+  .btn.ghost{background:#fff; color:var(--ink); border:1px solid var(--line2);}
+  .btn.ghost:hover{border-color:var(--red); color:var(--red);}
+  .openrow{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+
+  .tips{margin-top:14px; background:#FFF7F0; border:1px solid #FBE3CF; border-radius:12px; padding:14px 16px;}
+  .tips h4{margin:0 0 8px; font-size:12.5px; font-weight:800; color:var(--amber);}
+  .tips ul{margin:0; padding-left:0; list-style:none;}
+  .tips li{position:relative; padding:5px 0 5px 20px; font-size:12.5px; color:#6A5A45; border-top:1px dashed #F1DCC5;}
+  .tips li:first-child{border-top:none;}
+  .tips li::before{content:"✦"; position:absolute; left:2px; top:5px; color:var(--red); font-size:11px;}
+  .tips b{color:#3A2E20;}
+  .attachguide{margin-top:9px; font-size:12.5px; font-weight:700; color:#2A4CC0; background:#EEF2FF; border:1px solid #D6E0FF; border-radius:10px; padding:10px 13px;}
+  .attachguide span{color:#5A6478; font-weight:500;}
+  .samplewrap{margin-top:14px; border-top:1px dashed var(--line2); padding-top:13px;}
+  .samplelabel{font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:8px;}
+  .samplelabel span{font-weight:500; color:var(--ink-dim);}
+  .samplegrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(66px,1fr)); gap:8px;}
+  .samplethumb{aspect-ratio:3/4; border-radius:9px; background:#fff center/cover no-repeat; border:2px solid var(--line2); cursor:pointer;}
+  .samplethumb.on{border-color:var(--red); box-shadow:0 0 0 3px rgba(255,46,91,.15);}
+  .sampleactions{display:flex; gap:8px; margin-top:10px;}
+  .btn.mini{font-size:12.5px; padding:9px 12px; flex:1;}
+  .samplenote{font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;}
+  .samplenote b{color:var(--ink-soft);}
+  .refbox a.copyimg{color:var(--blue); font-weight:700; text-decoration:none; margin-left:6px;}
+
+  .datastat{font-size:11.5px; color:var(--ink-dim); margin-top:10px; text-align:right;}
+  .datastat b{color:var(--ink-soft);}
+  footer{margin-top:26px; font-size:12px; color:var(--ink-dim); text-align:center;}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr;} .sticky{position:static;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">🎨</div>
+    <div class="brand">
+      <h1>VMD 프롬프트 생성기</h1>
+      <div class="sub">SKT 부산본부 · 유통망 전용 · 프롬프트 복사 → Gemini·ChatGPT</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div>
+      <div class="card">
+        <h2><span class="dot"></span>제품 &amp; 문구</h2>
+        <div class="row">
+          <label class="lab">모델 선택</label>
+          <select id="f-model"></select>
+          <input id="f-model-custom" type="text" placeholder="모델명 직접 입력" style="display:none; margin-top:9px;">
+          <div class="refbox empty" id="refbox">
+            <div class="refthumb" id="refthumb">📱</div>
+            <div class="rtext" id="reftext">모델을 고르면 공식 제품 컷이 표시됩니다.</div>
+          </div>
+        </div>
+        <div class="row">
+          <label class="lab">핵심 문구 <span class="opt">— 포스터 헤드라인 한 줄</span></label>
+          <input id="f-copy" type="text" placeholder="예: 512GB를 약 12만원에">
+        </div>
+        <div class="row">
+          <label class="lab">추가 혜택 <span class="opt">(선택)</span></label>
+          <textarea id="f-benefit" placeholder="예: 위치8 무료 증정 / 제휴카드 96만원 할인"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot"></span>스타일 &amp; 규격</h2>
+        <div class="row">
+          <label class="lab">분위기</label>
+          <div class="seg full" id="seg-mood">
+            <button data-v="bright" class="on">🌈 화사 밝음</button>
+            <button data-v="premium">💎 프리미엄</button>
+            <button data-v="dark">🌑 다크 강렬</button>
+          </div>
+        </div>
+        <div class="row">
+          <label class="lab">이미지 비율 <span class="opt">— 앱에서도 이 비율로 설정하세요</span></label>
+          <div class="seg full" id="seg-ratio">
+            <button data-v="4:5" class="on">세로 4:5</button>
+            <button data-v="1:1">정사각 1:1</button>
+            <button data-v="9:16">스토리 9:16</button>
+            <button data-v="16:9">가로 16:9</button>
+          </div>
+          <div class="hint" id="ratio-hint">인스타 피드·매장 게시용 세로형 · 앱 화면에서도 같은 비율 선택</div>
+        </div>
+        <div class="row">
+          <label class="lab">타겟 고객 <span class="opt">(선택)</span></label>
+          <div class="chips" id="chips-target">
+            <span class="chip" data-v="단골 고객">단골 고객</span>
+            <span class="chip" data-v="타사 단골">타사 단골</span>
+            <span class="chip" data-v="기기변경">기기변경</span>
+            <span class="chip" data-v="번호이동">번호이동</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot"></span>매장 정보 &amp; 문구 처리</h2>
+        <div class="row">
+          <label class="lab">매장명 <span class="opt">— 이미지 최하단에 표기</span></label>
+          <div class="two">
+            <input id="f-agency" type="text" placeholder="예: 해운대대리점">
+            <input id="f-store" type="text" placeholder="예: 센텀점">
+          </div>
+        </div>
+        <div class="row">
+          <label class="lab">생성 방식</label>
+          <div class="seg full" id="seg-genmode">
+            <button data-v="template" class="on">🖼️ 템플릿 교체 · 추천</button>
+            <button data-v="bg">🎨 배경만</button>
+            <button data-v="text">🔤 글자까지</button>
+          </div>
+          <div class="hint" id="mode-hint">예시 포스터 + 제품 컷을 첨부하면, 예시의 스타일 그대로 제품만 바꿔 만듭니다. 품질·통일성이 가장 좋아요.</div>
+          <div class="attachguide" id="attachguide">📎 이 방식은 2장 첨부 — ① 승인 예시 포스터  ② 제품 컷</div>
+          <div class="samplewrap" id="sample-section">
+            <div class="samplelabel">예시 포스터 선택 <span>— 클릭해서 고르세요</span></div>
+            <div class="samplegrid" id="samplegrid"></div>
+            <div class="sampleactions" id="sampleactions" style="display:none;">
+              <button class="btn ghost mini" id="copy-sample">📋 예시 복사</button>
+              <a class="btn ghost mini" id="save-sample" download target="_blank" rel="noopener">저장</a>
+            </div>
+            <div class="samplenote" id="samplenote"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="sticky">
+      <div class="preview-card">
+        <h2><span class="dot"></span>구도 미리보기</h2>
+        <div class="stage"><div class="pv-frame" id="pv-frame"></div></div>
+        <div class="ratio-tag" id="pv-tag">세로 4:5 · 헤드라인 상단 / 제품 중앙 / 매장명 하단</div>
+      </div>
+
+      <div class="card promptbox-card">
+        <h2><span class="dot"></span>완성된 프롬프트</h2>
+        <div class="outbox" id="out"></div>
+        <div class="btns">
+          <button class="btn primary" id="copy">📋 프롬프트 복사</button>
+          <div class="openrow">
+            <button class="btn ghost" id="open-gemini">Gemini 열기</button>
+            <button class="btn ghost" id="open-gpt">ChatGPT 열기</button>
+          </div>
+        </div>
+
+        <div class="tips">
+          <h4>💡 무료로 잘 뽑는 법</h4>
+          <ul>
+            <li><b>비율은 앱에서도 직접</b> 선택하세요. 프롬프트 글자만으론 안 잡혀 정사각형으로 나오기 쉬워요.</li>
+            <li><b>한글이 깨지면 B 방식</b>(배경만)으로 뽑고 글자는 캔바·PPT로 얹으세요 — 제일 안정적.</li>
+            <li><b>제품이 이상하면</b> 위 공식 컷을 <b>참고 이미지로 첨부</b>하세요. 훨씬 정확해집니다.</li>
+            <li><b>한 번에 완성 기대 금지.</b> "다시 그려줘"로 여러 장, Gemini는 'Pro로 다시 그리기'.</li>
+            <li><b>Gemini·GPT 둘 다</b> 넣어보고 더 나은 걸 고르세요. 한글은 Gemini가 강한 편.</li>
+          </ul>
+        </div>
+        <div class="datastat" id="datastat">모델 목록 불러오는 중…</div>
+      </div>
+    </div>
+  </div>
+  <footer>SKT 부산본부 · 유통망 VMD 프롬프트 생성기 · 게시 전 담당자 승인 필수</footer>
+</div>
+
+<script>
+/* ============================================================
+   구글 시트 '웹에 게시(CSV)' 주소를 넣으면 모델 목록이 자동 반영됩니다.
+   시트 칸(첫 행): 제조사 , 모델명 , 이미지URL , 기본문구 , 상태
+   비워두면 아래 기본 목록으로 작동합니다.
+   ============================================================ */
+var SHEET_CSV_URL = '';
+
+/* 예시(스타일) 포스터 — GitHub samples/ 폴더 */
+var SAMPLE_POSTERS = [
+  {label:'예시 1', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_1.png'},
+  {label:'예시 2', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_2.png'},
+  {label:'예시 3', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_3.png'},
+  {label:'예시 4', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_4.png'},
+  {label:'예시 5', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_5.png'},
+  {label:'예시 6', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_6.png'},
+  {label:'예시 7', url:'https://codename-shim.github.io/vmd-generator/samples/sampe_7.png'}
+];
+
+var DEFAULT_MODELS = [
+  {maker:'삼성', name:'갤럭시 S26', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002891_gooddetail_1_aqNPpscf.png | https://codename-shim.github.io/vmd-generator/images/GDS000002891_gooddetail_2_aqNPpscf.png | https://codename-shim.github.io/vmd-generator/images/GDS000002891_gooddetail_3_aqNPpscf.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'갤럭시 S26+', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002901_gooddetail_1_WQkanGBg.png | https://codename-shim.github.io/vmd-generator/images/GDS000002901_gooddetail_2_WQkanGBg.png | https://codename-shim.github.io/vmd-generator/images/GDS000002901_gooddetail_3_WQkanGBg.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'갤럭시 S26 울트라', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002907_gooddetail_1_YGxBkYK8.png | https://codename-shim.github.io/vmd-generator/images/GDS000002907_gooddetail_2_YGxBkYK8.png | https://codename-shim.github.io/vmd-generator/images/GDS000002907_gooddetail_3_YGxBkYK8.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'갤럭시 S25', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002687_gooddetail_1_3Z6zmxLS.png | https://codename-shim.github.io/vmd-generator/images/GDS000002687_gooddetail_2_3Z6zmxLS.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'갤럭시 Z 플립7', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002777_gooddetail_1_4FTryxSQ.png | https://codename-shim.github.io/vmd-generator/images/GDS000002777_gooddetail_2_4FTryxSQ.png | https://codename-shim.github.io/vmd-generator/images/GDS000002777_gooddetail_3_4FTryxSQ.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'A퀀텀6', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002801_gooddetail_1_NdqvtNkp.png | https://codename-shim.github.io/vmd-generator/images/GDS000002801_gooddetail_2_NdqvtNkp.png | https://codename-shim.github.io/vmd-generator/images/GDS000002801_gooddetail_3_NdqvtNkp.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'A37', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002936_gooddetail_1_xPuxVTeC.png | https://codename-shim.github.io/vmd-generator/images/GDS000002936_gooddetail_2_xPuxVTeC.png | https://codename-shim.github.io/vmd-generator/images/GDS000002936_gooddetail_3_xPuxVTeC.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'A17', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002872_gooddetail_1_dwn6EzuC.png | https://codename-shim.github.io/vmd-generator/images/GDS000002872_gooddetail_2_dwn6EzuC.png | https://codename-shim.github.io/vmd-generator/images/GDS000002872_gooddetail_3_dwn6EzuC.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'스타일폴더2', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002715_gooddetail_2_ct3b69np.png | https://codename-shim.github.io/vmd-generator/images/GDS000002715_gooddetail_3_ct3b69np.png', copy:'', status:'러닝'},
+  {maker:'삼성', name:'갤럭시 Wide9', img:'', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 17', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002810_gooddetail_1_Jkwx3hV8.png | https://codename-shim.github.io/vmd-generator/images/GDS000002810_gooddetail_2_Jkwx3hV8.png | https://codename-shim.github.io/vmd-generator/images/GDS000002810_gooddetail_3_Jkwx3hV8.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 17 Pro', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002820_gooddetail_1_cHM6RFwJ.png | https://codename-shim.github.io/vmd-generator/images/GDS000002820_gooddetail_2_cHM6RFwJ.png | https://codename-shim.github.io/vmd-generator/images/GDS000002820_gooddetail_3_cHM6RFwJ.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 17 Pro Max', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002829_gooddetail_1_sWmKYgUx.png | https://codename-shim.github.io/vmd-generator/images/GDS000002829_gooddetail_2_sWmKYgUx.png | https://codename-shim.github.io/vmd-generator/images/GDS000002829_gooddetail_3_sWmKYgUx.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone Air 256GB', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002841_gooddetail_1_NOyPuudd.png | https://codename-shim.github.io/vmd-generator/images/GDS000002841_gooddetail_2_NOyPuudd.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 17e 256GB', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002922_gooddetail_1_DkN8DAPG.png | https://codename-shim.github.io/vmd-generator/images/GDS000002922_gooddetail_2_DkN8DAPG.png | https://codename-shim.github.io/vmd-generator/images/GDS000002922_gooddetail_3_DkN8DAPG.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 16', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002610_gooddetail_1_9U3mWQY5.png | https://codename-shim.github.io/vmd-generator/images/GDS000002610_gooddetail_2_9U3mWQY5.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 16e', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002729_gooddetail_1_hNpwktGJ.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 15', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002069_goodbase_6_JdhHmrns.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 15 Plus', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002080_goodbase_6_Dnx3yv5g.png', copy:'', status:'러닝'},
+  {maker:'애플', name:'iPhone 15 Pro', img:'https://codename-shim.github.io/vmd-generator/images/GDS000002095_goodbase_6_YnF2qJcc.png', copy:'', status:'러닝'},
+  {maker:'키즈', name:'ZEM 폰 포켓피스', img:'', copy:'', status:'러닝'}
+];
+/* ============================================================ */
+
+(function(){
+  var state={mood:'bright', ratio:'4:5', genmode:'template', targets:[]};
+  var MODELS=[], SAMPLES=[], current=null, selectedSample=null;
+  var el=function(id){return document.getElementById(id);};
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  /* 장면 묘사형 무드 (규칙 나열 대신 구체 장면) */
+  var moodScene={
+    bright:'밝고 화사한 파스텔 그라디언트(코랄·피치·라이트블루) 배경, 부드러운 자연광, 산뜻하고 경쾌한 분위기',
+    premium:'딥 네이비에서 차콜로 이어지는 그라디언트 배경, 드라마틱한 스포트라이트와 은은한 반사, 고급스럽고 미니멀한 럭셔리 무드',
+    dark:'짙은 블랙 배경에 강한 림라이트와 절제된 네온 포인트, 임팩트 있고 강렬한 무드'
+  };
+  var ratioHint={'4:5':'인스타 피드·매장 게시용 세로형 · 앱 화면에서도 같은 비율 선택','1:1':'정사각 — SNS·썸네일 범용 · 앱에서도 1:1 선택','9:16':'스토리·릴스용 세로 풀 · 앱에서도 9:16 선택','16:9':'가로 — 배너·디스플레이용 · 앱에서도 16:9 선택'};
+
+  function parseCSV(text){var rows=[],row=[],cur='',q=false,i,c;text=text.replace(/\r/g,'');
+    for(i=0;i<text.length;i++){c=text[i];
+      if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+      else{if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}else cur+=c;}}
+    if(cur!==''||row.length){row.push(cur);rows.push(row);}return rows;}
+  function rowsToModels(rows){if(!rows.length)return[];var head=rows[0].map(function(h){return h.trim();});
+    function idx(ns){for(var n=0;n<ns.length;n++){var k=head.indexOf(ns[n]);if(k>=0)return k;}return -1;}
+    var iM=idx(['제조사','maker']),iN=idx(['모델명','모델','name']),iI=idx(['이미지URL','이미지','img']),iC=idx(['기본문구','문구','copy']),iS=idx(['상태','status']);
+    var out=[];for(var r=1;r<rows.length;r++){var row=rows[r];if(!row)continue;var name=(iN>=0?row[iN]:row[1]||'').trim();if(!name)continue;
+      out.push({maker:(iM>=0?row[iM]:row[0]||'').trim()||'기타',name:name,img:(iI>=0?row[iI]:'').trim(),copy:(iC>=0?row[iC]:'').trim(),status:(iS>=0?row[iS]:'').trim()||'러닝'});}return out;}
+  function buildModelSelect(){var sel=el('f-model');sel.innerHTML='';var by={};
+    MODELS.forEach(function(m,ix){if(m.status&&m.status.indexOf('종료')>=0)return;(by[m.maker]=by[m.maker]||[]).push({m:m,ix:ix});});
+    Object.keys(by).forEach(function(mk){var og=document.createElement('optgroup');og.label=mk;
+      by[mk].forEach(function(o){var op=document.createElement('option');op.value=String(o.ix);op.textContent=o.m.name;og.appendChild(op);});sel.appendChild(og);});
+    var cu=document.createElement('option');cu.value='__custom__';cu.textContent='직접 입력…';sel.appendChild(cu);onModelChange();}
+  function onModelChange(){var v=el('f-model').value,cb=el('f-model-custom');
+    if(v==='__custom__'){cb.style.display='block';current={maker:'',name:cb.value.trim()||'[모델명]',img:'',copy:''};setRef(null);}
+    else{cb.style.display='none';current=MODELS[+v]||null;setRef(current);if(current&&current.copy&&!el('f-copy').value.trim()){el('f-copy').value=current.copy;}}build();}
+  function setRef(m){var box=el('refbox'),th=el('refthumb'),tx=el('reftext');
+    if(m&&m.img){box.classList.remove('empty');
+      var us=m.img.split(/[|\n,]+/).map(function(u){return u.trim();}).filter(Boolean);
+      th.style.backgroundImage='url("'+us[0].replace(/"/g,'')+'")';th.textContent='';
+      var nums=['①','②','③','④','⑤','⑥'];
+      var copies=us.map(function(u,ix){return '<a class="copyimg" href="#" data-url="'+esc(u)+'">'+(nums[ix]||('#'+(ix+1)))+'</a>';}).join(' ');
+      tx.innerHTML='<b>'+esc(m.name)+'</b> 공식 컷 · '+us.length+'각도<br>복사: '+copies+' · <a class="dl" href="'+esc(us[0])+'" download target="_blank" rel="noopener">저장</a><br>여러 각도를 각각 복사해 Gemini에 붙여넣으면 제품이 더 정확해집니다.';}
+    else{box.classList.add('empty');th.style.backgroundImage='';th.textContent='📱';
+      tx.innerHTML=(m?'<b>'+esc(m.name)+'</b> — 이미지 미등록. 시트 <b>이미지URL</b> 칸에 공식 컷 주소를 넣어주세요.':'모델을 고르면 공식 제품 컷이 표시됩니다.');}}
+  function getModelName(){if(el('f-model').value==='__custom__'){return el('f-model-custom').value.trim()||'[모델명]';}return current?current.name:'[모델명]';}
+
+  el('f-model').addEventListener('change',onModelChange);
+  el('f-model-custom').addEventListener('input',function(){if(current)current.name=this.value.trim()||'[모델명]';build();});
+  ['f-copy','f-benefit','f-agency','f-store'].forEach(function(id){el(id).addEventListener('input',build);});
+  function seg(id,key,after){var c=el(id);c.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+    state[key]=b.dataset.v;Array.prototype.forEach.call(c.children,function(x){x.classList.remove('on');});b.classList.add('on');if(after)after();build();});}
+  seg('seg-mood','mood');
+  seg('seg-ratio','ratio',function(){el('ratio-hint').textContent=ratioHint[state.ratio];});
+  seg('seg-genmode','genmode',function(){
+    var g=state.genmode;
+    el('mode-hint').textContent = g==='template'
+      ? '예시 포스터 + 제품 컷을 첨부하면, 예시의 스타일 그대로 제품만 바꿔 만듭니다. 품질·통일성이 가장 좋아요.'
+      : (g==='bg' ? '글자 없는 배경만 만들고, 헤드라인·매장명은 캔바·PPT로 얹습니다.' : '헤드라인·매장명을 AI가 이미지 안에 넣습니다. 한글이 깨질 수 있으니 Gemini에서 짧은 문구로.');
+    el('attachguide').innerHTML = g==='template'
+      ? '📎 이 방식은 2장 첨부 — ① 승인 예시 포스터  ② 제품 컷'
+      : '📎 첨부(선택) — 제품 컷 1장이면 제품이 더 정확해집니다';
+    updateSampleVisibility();
+  });
+  el('chips-target').addEventListener('click',function(e){var ch=e.target.closest('.chip');if(!ch)return;ch.classList.toggle('on');
+    state.targets=Array.prototype.filter.call(this.children,function(x){return x.classList.contains('on');}).map(function(x){return x.dataset.v;});build();});
+  function storeName(){var a=el('f-agency').value.trim(),s=el('f-store').value.trim(),j=(a+' '+s).trim();return j||'[매장명]';}
+
+  function drawPreview(){var p=state.ratio.split(':'),rw=+p[0],rh=+p[1],maxW=260,maxH=300,w=maxW,h=w*rh/rw;if(h>maxH){h=maxH;w=h*rw/rh;}
+    var copyTxt=el('f-copy').value.trim()||'핵심 문구',store=storeName(),bM=state.genmode!=='text';
+    var bg=state.mood==='bright'?'#FFF4F7':(state.mood==='premium'?'#1B1F33':'#0F1016');
+    var fg=state.mood==='bright'?'#1A1A1A':'#FFFFFF';var faint=state.mood==='bright'?'rgba(0,0,0,.32)':'rgba(255,255,255,.45)';var acc='#FF2E5B';
+    var hL=bM?'헤드라인 자리 (나중에 얹음)':esc(copyTxt),sL=bM?'매장명 자리 (나중에 얹음)':esc(store);
+    var hS=bM?'stroke="'+acc+'" stroke-dasharray="3 3" fill="none"':'fill="'+acc+'" fill-opacity="0.14" stroke="'+acc+'"';
+    var fS=bM?'stroke="'+faint+'" stroke-dasharray="3 3" fill="none"':'fill="'+faint+'" fill-opacity="0.12" stroke="'+faint+'"';
+    el('pv-frame').innerHTML='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="'+w+'" height="'+h+'" fill="'+bg+'"/>'+
+      '<rect x="'+(w*0.1)+'" y="'+(h*0.06)+'" width="'+(w*0.8)+'" height="'+(h*0.13)+'" rx="4" '+hS+' stroke-width="1"/>'+
+      '<text x="'+(w/2)+'" y="'+(h*0.135)+'" text-anchor="middle" font-family="Pretendard,sans-serif" font-size="'+Math.max(9,w*0.052)+'" font-weight="800" fill="'+fg+'">'+trunc(hL,w*0.06)+'</text>'+
+      '<rect x="'+(w*0.36)+'" y="'+(h*0.28)+'" width="'+(w*0.28)+'" height="'+(h*0.42)+'" rx="'+(w*0.03)+'" fill="none" stroke="'+faint+'" stroke-width="1.4"/>'+
+      '<line x1="'+(w*0.44)+'" y1="'+(h*0.31)+'" x2="'+(w*0.56)+'" y2="'+(h*0.31)+'" stroke="'+faint+'" stroke-width="1.4"/>'+
+      '<text x="'+(w/2)+'" y="'+(h*0.51)+'" text-anchor="middle" font-family="Pretendard,sans-serif" font-size="'+Math.max(8,w*0.04)+'" fill="'+faint+'">제품</text>'+
+      '<rect x="0" y="'+(h*0.86)+'" width="'+w+'" height="'+(h*0.14)+'" '+fS+' stroke-width="1"/>'+
+      '<text x="'+(w/2)+'" y="'+(h*0.945)+'" text-anchor="middle" font-family="Pretendard,sans-serif" font-size="'+Math.max(8,w*0.042)+'" font-weight="600" fill="'+(bM?faint:fg)+'">'+trunc(sL,w*0.07)+'</text></svg>';
+    el('pv-tag').textContent=state.ratio.replace(':','﹕')+' · 헤드라인 상단 / 제품 중앙 / 매장명 하단';}
+  function trunc(t,per){var m=Math.max(6,Math.floor(260/per*0.9));return t.length>m?t.slice(0,m-1)+'…':t;}
+
+  /* 장면 묘사형 프롬프트 */
+  function build(){
+    drawPreview();
+    var model=getModelName(),copy=el('f-copy').value.trim(),benefit=el('f-benefit').value.trim(),store=storeName();
+    var targets=state.targets.length?state.targets.join('·'):''; var hasImg=current&&current.img;
+    var L=[];function push(t,h){L.push({t:t,h:(h||esc(t))});}
+    var mH=(model==='[모델명]')?'<span class="slot">[모델명]</span>':esc(model);
+
+    push(model+' 스마트폰을 주인공으로 한 세로형 프리미엄 광고 키비주얼.', mH+' 스마트폰을 주인공으로 한 세로형 프리미엄 광고 키비주얼.');
+    push(moodScene[state.mood]+'.');
+    push('제품은 화면 중앙에서 살짝 위쪽에 크고 선명하게, 약간 기울어진 각도로 배치하고 은은한 반사광을 더한다.');
+    push('상단 약 1/4과 하단 약 1/6 영역은 매끈하게 비워, 나중에 텍스트를 얹을 여백으로 남긴다.');
+    push('색감은 SKT 레드(#EA0029)가 포인트로 은은하게 감도는 세련된 톤. 고급 광고 사진 퀄리티, 매우 선명하게, 고해상도.');
+    if(hasImg){ push('첨부한 제품 참고 이미지의 형태·색상·카메라 배치를 그대로 정확히 반영한다.'); }
+    if(targets){ push('타겟 무드: '+targets+' 고객에게 어울리는 느낌.'); }
+
+    function memoLine(){ var memo='※ 나중에 얹을 문구(이미지엔 넣지 말 것): 헤드라인 “'+(copy||'[핵심 문구]')+'”'+(benefit?(', 혜택 “'+benefit+'”'):'')+', 매장명 “'+store+'”.'; push(memo, esc(memo)); }
+    if(state.genmode==='template'){
+      // 앞의 장면 묘사 대신, 예시 포스터 기반 지시로 교체 (L 초기화)
+      L=[];
+      push('첨부한 두 이미지를 참고해줘. 1번은 스타일 예시 포스터, 2번은 제품 컷이야.',
+           '첨부한 두 이미지를 참고해줘. 1번은 스타일 예시 포스터, 2번은 제품 컷이야.');
+      push('1번 포스터의 배경·조명·색감·레이아웃·전체적인 고급스러운 느낌은 그대로 유지하고, 제품만 2번('+model+')으로 자연스럽게 교체해줘.',
+           '1번 포스터의 배경·조명·색감·레이아웃·전체적인 고급스러운 느낌은 그대로 유지하고, 제품만 2번('+mH+')으로 자연스럽게 교체해줘.');
+      push('비율 '+state.ratio+', 고해상도. 헤드라인과 매장명이 들어갈 상단·하단 여백은 예시와 같은 위치로 비워둬.');
+      if(targets){ push('타겟 무드: '+targets+' 고객에게 어울리는 느낌.'); }
+      push('포인트 컬러는 SKT 레드(#EA0029) 계열 유지. 글자·텍스트는 이미지에 넣지 마.');
+      memoLine();
+    } else if(state.genmode==='text'){
+      var cH=copy?esc('"'+copy+'"'):'<span class="slot">"[핵심 문구]"</span>';
+      var line='이미지 상단에 굵고 선명한 한국어 헤드라인 '+(copy?('"'+copy+'"'):'"[핵심 문구]"')+'을 정확한 맞춤법으로, 배경과 대비되는 깔끔한 산세리프로 넣는다';
+      var lineH='이미지 상단에 굵고 선명한 한국어 헤드라인 '+cH+'을 정확한 맞춤법으로, 배경과 대비되는 깔끔한 산세리프로 넣는다';
+      if(benefit){line+=', 그 아래 작게 "'+benefit+'"';lineH+=', 그 아래 작게 "'+esc(benefit)+'"';}
+      var sH=(store==='[매장명]')?'<span class="slot">[매장명]</span>':esc(store);
+      line+='. 최하단에 작게 매장명 "'+store+'".';lineH+='. 최하단에 작게 매장명 "'+sH+'".';
+      push(line,lineH);
+    } else {
+      push('글자·텍스트·로고는 넣지 않고 배경 키비주얼만 만든다. (헤드라인과 매장명은 나중에 따로 얹는다.)');
+      if(copy||benefit){ memoLine(); }
+    }
+    el('out').innerHTML=L.map(function(x){return x.h;}).join('\n');
+    el('out').dataset.text=L.map(function(x){return x.t;}).join('\n');
+  }
+
+  function doCopy(btn){var txt=el('out').dataset.text||el('out').textContent;
+    var done=function(){var old=btn.innerHTML;btn.innerHTML='복사됐습니다 ✓';btn.classList.add('done');setTimeout(function(){btn.innerHTML=old;btn.classList.remove('done');},1500);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(function(){fb(txt,done);});}else{fb(txt,done);}}
+  function fb(txt,cb){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);cb();}
+  el('copy').addEventListener('click',function(){doCopy(this);});
+  el('open-gemini').addEventListener('click',function(){window.open('https://gemini.google.com/app','_blank');});
+  el('open-gpt').addEventListener('click',function(){window.open('https://chatgpt.com/','_blank');});
+
+  function updateSampleVisibility(){ var el2=el('sample-section'); if(el2) el2.style.display=(state.genmode==='template')?'block':'none'; }
+
+  function buildSampleGallery(){
+    var grid=el('samplegrid'), note=el('samplenote'), acts=el('sampleactions'); grid.innerHTML='';
+    if(!SAMPLES.length){ note.innerHTML='예시 포스터가 없습니다. 구글 시트에 <b>제조사=예시</b> 행으로 추가하거나, 코드 상단 <b>SAMPLE_POSTERS</b>에 넣으세요.'; acts.style.display='none'; return; }
+    note.textContent='';
+    SAMPLES.forEach(function(sp,i){ var d=document.createElement('div'); d.className='samplethumb'; d.title=sp.name||('예시 '+(i+1));
+      if(sp.img) d.style.backgroundImage='url("'+sp.img.replace(/"/g,'')+'")';
+      d.addEventListener('click',function(){ selectSample(i); }); grid.appendChild(d); });
+    selectSample(0);
+  }
+  function selectSample(i){ selectedSample=SAMPLES[i]||null; var t=el('samplegrid').children;
+    for(var k=0;k<t.length;k++){ t[k].classList.toggle('on',k===i); }
+    var acts=el('sampleactions'); if(selectedSample&&selectedSample.img){ acts.style.display='flex'; el('save-sample').href=selectedSample.img; } else acts.style.display='none'; }
+
+  function toPng(blob){ return new Promise(function(res,rej){ var u=URL.createObjectURL(blob), img=new Image();
+    img.onload=function(){ var c=document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight; c.getContext('2d').drawImage(img,0,0);
+      c.toBlob(function(b){ URL.revokeObjectURL(u); b?res(b):rej(0); },'image/png'); };
+    img.onerror=function(){ URL.revokeObjectURL(u); rej(0); }; img.src=u; }); }
+  async function copyImage(url,btn){ var old=btn.innerHTML;
+    try{ var r=await fetch(url,{mode:'cors'}); var blob=await r.blob(); var png=await toPng(blob);
+      await navigator.clipboard.write([new ClipboardItem({'image/png':png})]); btn.innerHTML='복사됨 ✓'; }
+    catch(e){ btn.innerHTML='복사 실패 — 저장 후 첨부'; }
+    setTimeout(function(){ btn.innerHTML=old; },1700); }
+
+  el('refbox').addEventListener('click',function(e){ var a=e.target.closest('.copyimg'); if(!a)return; e.preventDefault(); if(a.dataset.url) copyImage(a.dataset.url,a); });
+  el('copy-sample').addEventListener('click',function(){ if(selectedSample&&selectedSample.img) copyImage(selectedSample.img,this); });
+
+  function useModels(list,src){
+    var base=(list&&list.length)?list:DEFAULT_MODELS;
+    var SM=['예시','예시포스터','샘플','sample','example'];
+    MODELS=[]; SAMPLES=[];
+    base.forEach(function(m){ if(SM.indexOf((m.maker||'').toLowerCase())>=0 || SM.indexOf(m.maker)>=0){ SAMPLES.push({name:m.name,img:m.img}); } else MODELS.push(m); });
+    if(!SAMPLES.length && SAMPLE_POSTERS.length){ SAMPLES=SAMPLE_POSTERS.map(function(x){return {name:x.label,img:x.url};}); }
+    buildModelSelect(); buildSampleGallery(); updateSampleVisibility();
+    el('datastat').innerHTML='모델 <b>'+MODELS.length+'개</b> · 예시 <b>'+SAMPLES.length+'</b> · 출처: '+src;
+  }
+  if(SHEET_CSV_URL){fetch(SHEET_CSV_URL).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){useModels(rowsToModels(parseCSV(t)),'구글 시트');}).catch(function(){useModels(DEFAULT_MODELS,'기본 목록 (시트 연결 실패)');});}
+  else{useModels(DEFAULT_MODELS,'기본 목록 (시트 미설정)');}
+})();
+</script>
+</body>
+</html>
